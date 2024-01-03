@@ -1,51 +1,54 @@
-from django.shortcuts import render, redirect
-from django.http import JsonResponse, HttpResponse
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
 from .models import TodoItem
-from .forms import TodoItemForm
-from django.views.decorators.csrf import csrf_exempt
-import json
+from .forms import TodoItemSerializer
+from rest_framework import status
 
-@csrf_exempt
+@api_view(['GET'])
 def todo_list(request):
-    items = TodoItem.objects.all().values()
-    items_list = list(items)
-    return JsonResponse({'items': items_list})
+    """
+    List all todo items.
+    """
+    todos = TodoItem.objects.all()
+    serializer = TodoItemSerializer(todos, many=True)
+    return Response(serializer.data)
 
-@csrf_exempt
+@api_view(['POST'])
 def add_todo_item(request):
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            item = TodoItem.objects.create(
-                title=data['title'],
-                description=data['description'],
-                completed=data.get('completed', False),
-                due_date=data.get('due_date')
-            )
-            return JsonResponse({'id': item.id}, status=201)
-        except json.JSONDecodeError:
-            return HttpResponse("Invalid JSON", status=400)
-    return HttpResponse("Method not allowed", status=405)
+    """
+    Create a new todo item.
+    """
+    serializer = TodoItemSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-@csrf_exempt
+@api_view(['PUT'])
 def edit_todo_item(request, id):
-    if request.method == 'PUT':
-        try:
-            data = json.loads(request.body)
-            item = TodoItem.objects.get(pk=id)
-            item.title = data.get('title', item.title)
-            item.description = data.get('description', item.description)
-            item.completed = data.get('completed', item.completed)
-            item.due_date = data.get('due_date', item.due_date)
-            item.save()
-            return JsonResponse({'message': 'Item updated successfully'})
-        except TodoItem.DoesNotExist:
-            return HttpResponse("Item not found", status=404)
-        except json.JSONDecodeError:
-            return HttpResponse("Invalid JSON", status=400)
-    return HttpResponse("Method not allowed", status=405)
+    """
+    Update an existing todo item identified by ID.
+    """
+    try:
+        todo_item = TodoItem.objects.get(pk=id)
+    except TodoItem.DoesNotExist:
+        return Response({'message': 'Item not found'}, status=status.HTTP_404_NOT_FOUND)
+    
+    serializer = TodoItemSerializer(todo_item, data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-@csrf_exempt
+
+@api_view(['DELETE'])
 def delete_todo_item(request, id):
-    TodoItem.objects.get(pk=id).delete()
-    return redirect('todo_list')
+    """
+    Delete a todo item identified by the given ID.
+    """
+    try:
+        todo_item = TodoItem.objects.get(pk=id)
+        todo_item.delete()
+        return Response({'message': 'Item deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+    except TodoItem.DoesNotExist:
+        return Response({'message': 'Item not found'}, status=status.HTTP_404_NOT_FOUND)

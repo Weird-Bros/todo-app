@@ -1,10 +1,7 @@
-from django import forms
+from rest_framework import serializers
 from .models import TodoItem
 
-class TodoItemForm(forms.ModelForm):
+class TodoItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = TodoItem
-        fields = ['title', 'description', 'completed', 'due_date']
-        widgets = {
-            'due_date': forms.DateInput(attrs={'type': 'date'})
-        }
+        fields = ['id', 'title', 'description', 'completed', 'due_date']

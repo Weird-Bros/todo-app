@@ -17,6 +17,19 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 from server import views
+from drf_yasg.views import get_schema_view
+from drf_yasg import openapi
+from rest_framework import permissions
+
+schema_view = get_schema_view(
+    openapi.Info(
+        title = "todo_list",
+        default_version='v1',
+        description= "",
+    ),
+    public= True,
+    permission_classes=(permissions.AllowAny,),
+)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -24,4 +37,6 @@ urlpatterns = [
     path('add/', views.add_todo_item, name='add_todo_item'),
     path('edit/<int:id>/', views.edit_todo_item, name='edit_todo_item'),
     path('delete/<int:id>/', views.delete_todo_item, name='delete_todo_item'),
+    path ('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
+    path('swagger.json', schema_view.without_ui(cache_timeout=0), name='schema-json'),
 ]
